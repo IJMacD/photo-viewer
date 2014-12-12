@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Photos</title>
+    <style>
+      html,
+      body {
+        background-color: black;
+        height: 100%;
+        margin: 0;
+      }
+      #photo-holder {
+        background-color: black;
+        background-position: 50%;
+        background-repeat: no-repeat;
+        background-size: contain;
+        box-sizing: border-box;
+        color: white;
+        font-family: sans-serif;
+        height: 100%;
+        padding-top: 25%;
+        text-align: center;
+        transition: all 1s;
+        width: 100%;
+      }
+      .fade {
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="photo-holder"></div>
+    <script src="jquery-2.1.1.min.js"></script>
+    <script>
+      (function(){
+        var photoHolder = $('#photo-holder'),
+            feed,
+            index = 0,
+
+            INTERVAL_FEED = 60 * 1000,
+            INTERVAL_PHOTO = 10 * 1000,
+            TIMEOUT_FADEIN = 1 * 1000;
+
+        setInterval(getFeed, INTERVAL_FEED);
+        getFeed();
+
+        function getFeed(){
+          $.get('feed.php', function(data){
+            var firstTime = !feed;
+            if(data && data.length){
+              feed = data;
+              if(firstTime){
+                setInterval(showNextImage, INTERVAL_PHOTO);
+                showNextImage();
+                photoHolder.text("");
+              }
+            } else {
+              if(firstTime) {
+                photoHolder.text("No images found");
+              }
+              console.error("Problem loading images");
+            }
+          }, null, "json");
+        }
+
+        function showNextImage(){
+          fadeOut();
+
+          setTimeout(fadeIn, TIMEOUT_FADEIN);
+        }
+
+        function fadeOut(){
+          photoHolder.addClass("fade");
+        }
+
+        function fadeIn(){
+
+          photoHolder.css('background-image', 'url("' + feed[index] + '")');
+          index = (index + 1) % feed.length;
+
+          photoHolder.removeClass("fade");
+        }
+
+      }());
+    </script>
+  </body>
+</html>
