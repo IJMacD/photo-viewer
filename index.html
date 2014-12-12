@@ -31,15 +31,18 @@
   <body>
     <div id="photo-holder"></div>
     <script src="jquery-2.1.1.min.js"></script>
+    <script src="es6-promise-2.0.1.min.js"></script>
     <script>
       (function(){
         var photoHolder = $('#photo-holder'),
             feed,
             index = 0,
+            imgs = {},
 
             INTERVAL_FEED = 60 * 1000,
             INTERVAL_PHOTO = 10 * 1000,
-            TIMEOUT_FADEIN = 1 * 1000;
+            TIMEOUT_FADEOUT = 1 * 1000,
+            TIMEOUT_FADEIN = 0.5 * 1000;
 
         setInterval(getFeed, INTERVAL_FEED);
         getFeed();
@@ -50,9 +53,8 @@
             if(data && data.length){
               feed = data;
               if(firstTime){
-                setInterval(showNextImage, INTERVAL_PHOTO);
-                showNextImage();
-                photoHolder.text("");
+                showNextImage(true);
+                photoHolder.text("Loading...");
               }
             } else {
               if(firstTime) {
@@ -63,10 +65,31 @@
           }, null, "json");
         }
 
-        function showNextImage(){
-          fadeOut();
+        function showNextImage(first){
 
-          setTimeout(fadeIn, TIMEOUT_FADEIN);
+          var url = feed[index],
+              // null timer for first image
+              timer = first ? Promise.resolve() : promiseTimer(INTERVAL_PHOTO);
+
+          Promise.all([
+            loadImage(url),
+            timer
+          ]).then(function(){
+            photoHolder.text("");
+            fadeOut();
+
+            setTimeout(function(){
+              setImage(url);
+            }, TIMEOUT_FADEOUT);
+
+            setTimeout(fadeIn, TIMEOUT_FADEOUT + TIMEOUT_FADEIN);
+
+            index = (index + 1) % feed.length;
+            showNextImage();
+
+          }, function(e){
+            console.error(e);
+          });
         }
 
         function fadeOut(){
@@ -74,11 +97,36 @@
         }
 
         function fadeIn(){
-
-          photoHolder.css('background-image', 'url("' + feed[index] + '")');
-          index = (index + 1) % feed.length;
-
           photoHolder.removeClass("fade");
+        }
+
+        function setImage(url){
+          photoHolder.css('background-image', 'url("' + url + '")');
+        }
+
+        function loadImage(url){
+
+          if(!imgs[url]){
+
+            imgs[url] = new Promise(function(resolve, reject){
+              var img = new Image();
+
+              img.onload = function(){ resolve(img); };
+
+              img.onerror = function(e){ reject(e); };
+
+              img.src = url;
+            });
+
+          }
+
+          return imgs[url];
+        }
+
+        function promiseTimer(time){
+          return new Promise(function(resolve){
+            setTimeout(resolve, time);
+          });
         }
 
       }());
