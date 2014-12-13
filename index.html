@@ -38,6 +38,7 @@
             feed,
             index = 0,
             imgs = {},
+            timer,
 
             fullscreenMethods = [
               'requestFullscreen',
@@ -63,49 +64,57 @@
           });
         });
 
+        $(window).on("keyup", function(e){
+          if(e.which === 37){
+            //prev Photo
+            index = (feed.length + index - 2) % feed.length;
+            showImage();
+          }
+          else if(e.which === 39){
+            //next Photo
+            showImage();
+          }
+        });
+
         function getFeed(){
           $.get('feed.php', function(data){
             var firstTime = !feed;
+
             if(data && data.length){
               feed = data;
+
               if(firstTime){
-                showNextImage(true);
+                loadImage(data[0]).then(showImage);
                 photoHolder.text("Loading...");
               }
             } else {
+
               if(firstTime) {
                 photoHolder.text("No images found");
               }
+
               console.error("Problem loading images");
             }
           }, null, "json");
         }
 
-        function showNextImage(first){
+        function showImage(){
 
-          var url = feed[index],
-              // null timer for first image
-              timer = first ? Promise.resolve() : promiseTimer(INTERVAL_PHOTO);
+          var url = feed[index];
 
-          Promise.all([
-            loadImage(url),
-            timer
-          ]).then(function(){
-            photoHolder.text("");
-            fadeOut();
+          photoHolder.text("");
+          fadeOut();
 
-            setTimeout(function(){
-              setImage(url);
-            }, TIMEOUT_FADEOUT);
+          setTimeout(function(){
+            setImage(url);
+          }, TIMEOUT_FADEOUT);
 
-            setTimeout(fadeIn, TIMEOUT_FADEOUT + TIMEOUT_FADEIN);
+          setTimeout(fadeIn, TIMEOUT_FADEOUT + TIMEOUT_FADEIN);
 
-            index = (index + 1) % feed.length;
-            showNextImage();
+          // Move index to next image
+          index = (index + 1) % feed.length;
 
-          }, function(e){
-            console.error(e);
-          });
+          preloadNextImage();
         }
 
         function fadeOut(){
@@ -118,6 +127,20 @@
 
         function setImage(url){
           photoHolder.css('background-image', 'url("' + url + '")');
+        }
+
+        function preloadNextImage(){
+          var url = feed[index];
+
+          Promise.all([
+            loadImage(url),
+            promiseTimer(INTERVAL_PHOTO)
+            ])
+          .then(function(){
+            showImage();
+          }, function(e){
+            console.error(e);
+          });
         }
 
         function loadImage(url){
@@ -140,8 +163,11 @@
         }
 
         function promiseTimer(time){
+          if(timer){
+            clearTimeout(timer);
+          }
           return new Promise(function(resolve){
-            setTimeout(resolve, time);
+            timer = setTimeout(resolve, time);
           });
         }
 
