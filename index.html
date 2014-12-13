@@ -39,6 +39,13 @@
             index = 0,
             imgs = {},
 
+            fullscreenMethods = [
+              'requestFullscreen',
+              'webkitRequestFullscreen',
+              'mozRequestFullScreen',
+              'msRequestFullscreen'
+            ],
+
             INTERVAL_FEED = 60 * 1000,
             INTERVAL_PHOTO = 10 * 1000,
             TIMEOUT_FADEOUT = 1 * 1000,
@@ -46,6 +53,15 @@
 
         setInterval(getFeed, INTERVAL_FEED);
         getFeed();
+
+        photoHolder.on("click", function(){
+          fullscreenMethods.forEach(function(method){
+            if(photoHolder[0][method]){
+              photoHolder[0][method]();
+              return false;
+            }
+          });
+        });
 
         function getFeed(){
           $.get('feed.php', function(data){
